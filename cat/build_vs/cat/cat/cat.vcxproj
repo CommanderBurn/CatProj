@@ -180,6 +180,7 @@
     <ClInclude Include="..\..\..\include\cat\utility\cat_memory.h" />
     <ClInclude Include="..\..\..\include\cat\utility\cat_time.h" />
     <ClInclude Include="..\..\..\include\cat\utility\cat_thread.h" />
+    <ClInclude Include="memory_pool.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\..\source\cat\cat_platform.inl" />
