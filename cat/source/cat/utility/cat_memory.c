@@ -21,11 +21,10 @@
 
 #include "cat/utility/cat_memory.h"
 #include "cat/cat_platform.inl"
-#include "cat/utility/memory_pool.h"
 
 #include <assert.h>
 #include <string.h>
-
+#pragma warning (disable:5045)
 
 cat_implementation_begin;
 
@@ -37,12 +36,30 @@ typedef struct cat_malloc_metadata_s
     //****TO-DO-MEMORY: fill in this structure.
     uint32_t test[7];
     uint32_t reserved;
+
 #else // #ifdef _WIN32
     uint32_t reserved;
 #endif // #else // #ifdef _WIN32
 } cat_malloc_metadata_t;
+
+
 #endif // #ifdef CAT_DEBUG
 
+typedef struct Block
+{
+    const void* block;
+    const void* prev;
+    const void* next;
+    size_t blockSize;
+} blockData;
+struct MemPool
+{
+    size_t totalSize;
+
+    size_t totalBlockSize;
+
+    blockData* freeBlocks;
+} MemPool = {0,0,0};
 
 cat_impl void* cat_memset(void* const p_block, uint8_t const value, size_t const set_size)
 {
@@ -131,16 +148,26 @@ cat_impl void cat_free(void* const p_block)
 cat_impl bool cat_memory_pool_create(size_t const pool_size)
 {
     assert_or_bail(pool_size) false;
-    
+    if (MemPool.freeBlocks != 0)
+    {
+        MemPool.freeBlocks[pool_size];
+        for (size_t i = 0; i < pool_size; ++i) //Create an empty block of data for each of the pool_size
+        {
+            MemPool.freeBlocks[i].block = 0;
+        }
+    }
     //****TO-DO-MEMORY: allocate and initialize pool.
-
+    MemPool.totalSize = pool_size;
     return false;
 }
 
 cat_impl bool cat_memory_pool_destroy(void)
 {
     //****TO-DO-MEMORY: safely deallocate pool allocated above.
-
+    for (size_t i = 0; i < MemPool.totalSize; ++i) //Given the total size of the pool free each variable.
+    {
+        cat_memory_dealloc(&MemPool.freeBlocks[i].block);
+    }
     return false;
 }
 
@@ -150,6 +177,33 @@ cat_impl void* cat_memory_alloc(size_t const block_size)
 
     //****TO-DO-MEMORY: reserve block in managed pool.
 
+    //Scan through the pool and when the first empty vairable is found add it to the pool. Else return false
+    for (size_t i = 0; i < MemPool.totalSize; ++i)
+    {
+        if (MemPool.freeBlocks[i].block == 0)
+        {
+            if (i == 0)
+            {
+                MemPool.freeBlocks[i].blockSize = block_size;
+                MemPool.freeBlocks[i].block = malloc(block_size);
+                MemPool.totalBlockSize += block_size;
+                break;
+            }
+            else
+            {
+                    MemPool.freeBlocks[i].prev = MemPool.freeBlocks[i - 1].block;
+                    MemPool.freeBlocks[i].blockSize = block_size;
+                    MemPool.totalBlockSize += block_size;
+                    MemPool.freeBlocks[i].block = malloc(block_size);
+                    if (i != MemPool.totalSize - 1)
+                    MemPool.freeBlocks[i - 1].next = MemPool.freeBlocks[i].block;
+                    break;
+            }
+
+        }
+
+    }
+
     return NULL;
 }
 
@@ -157,7 +211,19 @@ cat_impl bool cat_memory_dealloc(void* const p_block)
 {
     assert_or_bail(p_block) false;
 
+    //Assuming this is the actual block from the pool being called and some scanning variable. Set that block free.
     //****TO-DO-MEMORY: safely release block reserved above.
+    
+    for (size_t i = 0; i < MemPool.totalSize; ++i)
+    {
+        if (MemPool.freeBlocks[i].block == &p_block)
+        {
+            MemPool.totalBlockSize -= MemPool.freeBlocks[i].blockSize;
+            free(&MemPool.freeBlocks[i].block);
+            MemPool.freeBlocks[i - 1].next = MemPool.freeBlocks[i + 1].block;
+            MemPool.freeBlocks[i + 1].prev = MemPool.freeBlocks[i - 1].block;
+        }
+    }
 
     return false;
 }
@@ -192,15 +258,27 @@ cat_noinl void cat_memory_test(void)
     block_rh = NULL;
 
     {
-        void* volatile testA = malloc(1024);
-        void* volatile testB = malloc(2048);
-        void* volatile testC = malloc(4096);
-        void* volatile testD = malloc(8192);
 
-        free(testD);
-        free(testC);
-        free(testB);
-        free(testA);
+        size_t pool_size = 4;
+        if (MemPool.freeBlocks != 0)
+        {
+            MemPool.freeBlocks[pool_size];
+            for (size_t i = 0; i < pool_size; ++i) //Create an empty block of data for each of the pool_size
+            {
+                MemPool.freeBlocks[i].block = 0;
+            }
+        }
+        MemPool.totalSize = pool_size;
+        cat_memory_pool_create(4);
+        cat_memory_alloc(1024);
+        cat_memory_alloc(2048);
+        cat_memory_alloc(4096);
+        cat_memory_alloc(8192);
+
+        cat_memory_dealloc(&MemPool.freeBlocks[2]);
+        
+
+        cat_memory_pool_destroy();
     }
 }
 
