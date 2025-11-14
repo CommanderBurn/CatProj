@@ -36,6 +36,9 @@
     <ClCompile Include="..\..\..\source\cat\utility\cat_thread.c">
       <Filter>Source Files\utility</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\..\source\cat\utility\cat_profiler.c">
+      <Filter>Source Files\utility</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\..\include\cat\cat.h">
@@ -57,6 +60,9 @@
       <Filter>Header Files\utility</Filter>
     </ClInclude>
     <ClInclude Include="memory_pool.h">
+      <Filter>Header Files\utility</Filter>
+    </ClInclude>
+    <ClInclude Include="..\..\..\include\cat\utility\cat_profiler.h">
       <Filter>Header Files\utility</Filter>
     </ClInclude>
   </ItemGroup>
